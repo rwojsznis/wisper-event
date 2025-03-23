@@ -21,16 +21,13 @@ module Wisper
         end
       else
         # Structured event behavior
-        method_name = Wisper::Listener.generated_method_name(event.class.name)
-
         if listener.respond_to?(:_wisper_listener?)
-          if !listener.respond_to?(method_name)
-            raise NoMethodError, "listener does not handle #{event.class}"
-          else
-            listener.trigger(event)
+          listener.trigger(event)
+        else
+          method_name = Wisper::Listener.generated_method_name(event.class.name)
+          if listener.respond_to?(method_name)
+            broadcaster.broadcast(listener, publisher, method_name, event)
           end
-        elsif listener.respond_to?(method_name)
-          broadcaster.broadcast(listener, publisher, method_name, event)
         end
       end
     end

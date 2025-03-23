@@ -2,6 +2,8 @@
 
 module Wisper
   module Listener
+    UnhandledEventError = Class.new(StandardError)
+
     def self.generated_method_name(event_class)
       class_name = event_class.gsub('::', '_')
       name =
@@ -23,7 +25,7 @@ module Wisper
 
     def trigger(event)
       method_name = Wisper::Listener.generated_method_name(event.class.name)
-      public_send(method_name, event)
+      respond_to?(method_name) ? public_send(method_name, event) : raise(UnhandledEventError, "Event #{event.class} not handled in #{self.class}")
     end
 
     module ClassMethods
