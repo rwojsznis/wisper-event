@@ -1,6 +1,7 @@
 require 'set'
 require 'wisper/version'
 require 'wisper/configuration'
+require 'wisper/listener'
 require 'wisper/publisher'
 require 'wisper/value_objects/prefix'
 require 'wisper/value_objects/events'

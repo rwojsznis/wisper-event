@@ -39,8 +39,14 @@ module Wisper
     #
     # @return [self]
     def broadcast(event, *args, **kwargs)
-      registrations.each do | registration |
-        registration.broadcast(clean_event(event), self, *args, **kwargs)
+      registrations.each do |registration|
+        if event.is_a?(String) || event.is_a?(Symbol)
+          # Traditional string/symbol events - clean them
+          registration.broadcast(clean_event(event), self, *args, **kwargs)
+        else
+          # Structured event objects - pass them directly
+          registration.broadcast(event, self, *args, **kwargs)
+        end
       end
       self
     end

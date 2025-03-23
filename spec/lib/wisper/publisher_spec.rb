@@ -2,6 +2,9 @@ describe Wisper::Publisher do
   let(:listener)  { double('listener') }
   let(:publisher) { publisher_class.new }
 
+  class TestEvent
+  end
+
   describe '.subscribe' do
     it 'subscribes given listener to all published events' do
       expect(listener).to receive(:this_happened)
@@ -237,6 +240,10 @@ describe Wisper::Publisher do
 
     it 'returns publisher so methods can be chained' do
       expect(publisher.on(:foo) {}).to eq publisher
+    end
+
+    it 'returns published when object is passed' do
+      expect(publisher.on(TestEvent.new) {}).to eq publisher
     end
   end
 
