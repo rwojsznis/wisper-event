@@ -21,6 +21,11 @@ module Wisper
       true
     end
 
+    def trigger(event)
+      method_name = Wisper::Listener.generated_method_name(event.class.name)
+      public_send(method_name, event)
+    end
+
     module ClassMethods
       def on(event_class, &block)
         method_name = Wisper::Listener.generated_method_name(event_class.name)
