@@ -26,18 +26,30 @@ module Wisper
       #
       # @return [Boolean]
       def include?(event)
-        appropriate_method.call(event.to_s)
+        if event.is_a?(String) || event.is_a?(Symbol)
+          appropriate_method.call(event.to_s)
+        else
+          if list.is_a?(Class)
+            event.is_a?(list)
+          elsif list.is_a?(Enumerable) && list.any? { |item| item.is_a?(Class) }
+            list.any? { |item| item.is_a?(Class) && event.is_a?(item) }
+          else
+            # Try the appropriate method as a fallback
+            appropriate_method.call(event)
+          end
+        end
       end
 
       private
 
       def methods
         {
-          NilClass   => ->(_event) { true },
-          String     => ->(event)  { list == event },
-          Symbol     => ->(event)  { list.to_s == event },
-          Enumerable => ->(event)  { list.map(&:to_s).include? event },
-          Regexp     => ->(event)  { list.match(event) || false }
+          NilClass => ->(_event) { true },
+          String => ->(event) { list == event },
+          Symbol => ->(event) { list.to_s == event },
+          Enumerable => ->(event) { list.map(&:to_s).include? event },
+          Regexp => ->(event) { list.match(event) || false },
+          Class => ->(event) { event.is_a?(list) },
         }
       end
 
@@ -56,6 +68,8 @@ module Wisper
       def type_not_recognized
         fail(ArgumentError, "#{list.class} not supported for `on` argument")
       end
-    end # class Events
+    end
+
+    # class Events
   end # module ValueObjects
 end # module Wisper

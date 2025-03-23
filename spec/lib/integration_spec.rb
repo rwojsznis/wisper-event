@@ -106,7 +106,7 @@ describe Wisper do
   it 'subscribes block to all published events' do
     insider = double('Insider')
 
-    # expect(insider).to receive(:render).with('hello')
+    expect(insider).to receive(:render).with('hello')
 
     command = MyCommand.new
     command.on(MySuccessEvent) { |event| insider.render(event.message) }
