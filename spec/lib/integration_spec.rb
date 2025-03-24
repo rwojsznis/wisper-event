@@ -1,4 +1,4 @@
-# Example
+require_relative "../../lib/wisper/rspec/event_matchers"
 
 class MySuccessEvent
   attr_reader :message
@@ -127,5 +127,15 @@ describe Wisper do
 
     command.execute(true)
     command.execute(false)
+  end
+
+  it 'implements custom matchers' do
+    command = MyCommand.new
+
+    expect { command.execute(true) }
+      .to broadcast_event(MySuccessEvent).with(message: 'hello')
+
+      expect { command.execute(false) }
+      .to broadcast_event(MyFailureEvent).with(message: 'world')
   end
 end
