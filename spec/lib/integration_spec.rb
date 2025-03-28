@@ -52,6 +52,25 @@ class StructuredListener
   end
 end
 
+class StructuredListenerNotImplemented
+  include Wisper::Listener
+
+  def initialize(verify)
+    @verify = verify
+  end
+
+  on(MySuccessEvent) do |event|
+    @verify.call_success(event.message)
+  end
+
+  # No method for MyFailureEvent
+end
+
+# Test cases
+RSpec.configure do |config|
+  config.include Wisper::RSpec::BroadcastEventMatcher
+end
+
 describe Wisper do
   it 'subscribes object to all published events' do
     classic_listener = instance_double(ClassicListener)
@@ -86,6 +105,23 @@ describe Wisper do
     expect(verify).to receive(:call_success).with('hello')
     command.subscribe(StructuredListener.new(verify))
 
+    command.execute(true)
+  end
+
+  it 'raises error when event is not handled' do
+    verify = double('verify')
+
+    command = MyCommand.new
+    command.subscribe(StructuredListenerNotImplemented.new(verify))
+
+    expect do
+      command.execute(false)
+    end.to raise_error(
+      Wisper::Listener::UnhandledEventError,
+      "Event #{MyFailureEvent} not handled in #{StructuredListenerNotImplemented}"
+    )
+
+    expect(verify).to receive(:call_success).with('hello')
     command.execute(true)
   end
 
