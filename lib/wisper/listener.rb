@@ -4,13 +4,14 @@ module Wisper
   module Listener
     UnhandledEventError = Class.new(StandardError)
 
+    # NOTE: mostly copied from ActiveSupport#underscore
     def self.generated_method_name(event_class)
       class_name = event_class.gsub('::', '_')
       name =
         class_name
-          .gsub(/([A-Z]+)([A-Z][a-z])/, '\1_\2')
-          .gsub(/([a-z\d])([A-Z])/, '\1_\2')
-          .downcase
+        .gsub(/([A-Z]+)([A-Z][a-z])/, '\1_\2')
+        .gsub(/([a-z\d])([A-Z])/, '\1_\2')
+        .downcase
 
       "on_#{name}"
     end
@@ -30,7 +31,7 @@ module Wisper
       else
         raise(
           UnhandledEventError,
-          "Event #{event.class} not handled in #{self.class}",
+          "Event #{event.class} not handled in #{self.class}"
         )
       end
     end
