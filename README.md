@@ -1,380 +1,301 @@
-# Wisper
+# wisper-event
 
-*A micro library providing Ruby objects with Publish-Subscribe capabilities*
+A structured event extension for the Wisper gem.
 
-[![Gem Version](https://badge.fury.io/rb/wisper.svg)](http://badge.fury.io/rb/wisper)
-[![Code Climate](https://codeclimate.com/github/krisleech/wisper.svg)](https://codeclimate.com/github/krisleech/wisper)
-[![Build Status](https://github.com/krisleech/wisper/actions/workflows/test.yml/badge.svg)](https://github.com/krisleech/wisper/actions)
-[![Coverage Status](https://coveralls.io/repos/krisleech/wisper/badge.svg?branch=master)](https://coveralls.io/r/krisleech/wisper?branch=master)
+## Why wisper-event?
 
-* Decouple core business logic from external concerns in Hexagonal style architectures
-* Use as an alternative to ActiveRecord callbacks and Observers in Rails apps
-* Connect objects based on context without permanence
-* Publish events synchronously or asynchronously
+The [Wisper gem](https://github.com/krisleech/wisper) is a popular micro-library for implementing the publisher-subscriber pattern in Ruby. While powerful and flexible, Wisper's approach of broadcasting symbols or strings with unstructured arguments can lead to:
 
-Note: Wisper was originally extracted from a Rails codebase but is not dependent on Rails.
+1. **Coupling issues** - As applications grow, it becomes difficult to track which publishers broadcast which events and which subscribers listen to them
+2. **Unclear interfaces** - Without structured events, argument signatures can change unexpectedly, causing silent failures
+3. **Poor discoverability** - It's challenging to find all handlers for a specific event across a large codebase
 
-Please also see the [Wiki](https://github.com/krisleech/wisper/wiki) for more additional information and articles.
+**wisper-event** provides a more structured approach by allowing you to use proper Ruby objects as events while maintaining backward compatibility with Wisper's string/symbol-based events. This lets you:
 
-**For greenfield applications you might also be interested in
-[WisperNext](https://gitlab.com/kris.leech/wisper_next) and [Ma](https://gitlab.com/kris.leech/ma).**
+- Gradually migrate your codebase to structured events
+- Have clear, well-defined event interfaces
+- Implement compile-time checking of event handlers
+- Easily find event usage with standard code search tools
+
+This gem was inspired by the original Wisper author's other gems:
+- [wisper_next](https://gitlab.com/kris.leech/wisper_next)
+- [ma](https://gitlab.com/kris.leech/ma)
 
 ## Installation
 
 Add this line to your application's Gemfile:
 
 ```ruby
-gem 'wisper', '~> 3.0'
+gem 'wisper-event'
+```
+
+And then execute:
+
+```
+bundle install
 ```
 
 ## Usage
 
-Any class with the `Wisper::Publisher` module included can broadcast events
-to subscribed listeners. Listeners subscribe, at runtime, to the publisher.
+Enabling wisper-event
 
-### Publishing
+After installing the gem, you need to apply the monkey patches:
 
 ```ruby
-class CancelOrder
-  include Wisper::Publisher
+WisperEvent.apply!
+```
 
-  def call(order_id)
-    order = Order.find_by_id(order_id)
+This is best done during your application's initialization.
 
-    # business logic...
+Creating Structured Events
 
-    if order.cancelled?
-      broadcast(:cancel_order_successful, order.id)
-    else
-      broadcast(:cancel_order_failed, order.id)
+Define your events as plain Ruby classes:
+
+```ruby
+module Event
+  class OrderCreated
+    attr_reader :order_id, :customer_id
+    
+    def initialize(order_id:, customer_id:)
+      @order_id = order_id
+      @customer_id = customer_id
+    end
+  end
+
+  class OrderFailed
+    attr_reader :reason
+    
+    def initialize(reason)
+      @reason = reason
     end
   end
 end
 ```
 
-When a publisher broadcasts an event it can include any number of arguments.
-
-The `broadcast` method is also aliased as `publish`.
-
-You can also include `Wisper.publisher` instead of `Wisper::Publisher`.
-
-### Subscribing
-
-#### Objects
-
-Any object can be subscribed as a listener.
+Publishing Events
+You can publish both traditional Wisper events and structured events from the same publisher:
 
 ```ruby
-cancel_order = CancelOrder.new
-
-cancel_order.subscribe(OrderNotifier.new)
-
-cancel_order.call(order_id)
-```
-
-The listener would need to implement a method for every event it wishes to receive.
-
-```ruby
-class OrderNotifier
-  def cancel_order_successful(order_id)
-    order = Order.find_by_id(order_id)
-
-    # notify someone ...
-  end
-end
-```
-
-#### Blocks
-
-Blocks can be subscribed to single events and can be chained.
-
-```ruby
-cancel_order = CancelOrder.new
-
-cancel_order.on(:cancel_order_successful) { |order_id| ... }
-            .on(:cancel_order_failed)     { |order_id| ... }
-
-cancel_order.call(order_id)
-```
-
-You can also subscribe to multiple events using `on` by passing
-additional events as arguments.
-
-```ruby
-cancel_order = CancelOrder.new
-
-cancel_order.on(:cancel_order_successful) { |order_id| ... }
-            .on(:cancel_order_failed,
-                :cancel_order_invalid)    { |order_id| ... }
-
-cancel_order.call(order_id)
-```
-
-Do not `return` from inside a subscribed block, due to the way
-[Ruby treats blocks](http://product.reverb.com/2015/02/28/the-strange-case-of-wisper-and-ruby-blocks-behaving-like-procs/)
-this will prevent any subsequent listeners having their events delivered.
-
-### Handling Events Asynchronously
-
-```ruby
-cancel_order.subscribe(OrderNotifier.new, async: true)
-```
-
-Wisper has various adapters for asynchronous event handling, please refer to
-[wisper-celluloid](https://github.com/krisleech/wisper-celluloid),
-[wisper-sidekiq](https://github.com/krisleech/wisper-sidekiq),
-[wisper-activejob](https://github.com/krisleech/wisper-activejob),
-[wisper-que](https://github.com/joevandyk/wisper-que) or
-[wisper-resque](https://github.com/bzurkowski/wisper-resque).
-
-Depending on the adapter used the listener may need to be a class instead of an object. In this situation, every method corresponding to events should be declared as a class method, too. For example:
-
-```ruby
-class OrderNotifier
-  # declare a class method if you are subscribing the listener class instead of its instance like:
-  #   cancel_order.subscribe(OrderNotifier)
-  #
-  def self.cancel_order_successful(order_id)
-    order = Order.find_by_id(order_id)
-
-    # notify someone ...
-  end
-end
-```
-
-### ActionController
-
-```ruby
-class CancelOrderController < ApplicationController
-
-  def create
-    cancel_order = CancelOrder.new
-
-    cancel_order.subscribe(OrderMailer,        async: true)
-    cancel_order.subscribe(ActivityRecorder,   async: true)
-    cancel_order.subscribe(StatisticsRecorder, async: true)
-
-    cancel_order.on(:cancel_order_successful) { |order_id| redirect_to order_path(order_id) }
-    cancel_order.on(:cancel_order_failed)     { |order_id| render action: :new }
-
-    cancel_order.call(order_id)
-  end
-end
-```
-
-### ActiveRecord
-
-If you wish to publish directly from ActiveRecord models you can broadcast events from callbacks:
-
-```ruby
-class Order < ActiveRecord::Base
+class OrderService
   include Wisper::Publisher
-
-  after_commit     :publish_creation_successful, on: :create
-  after_validation :publish_creation_failed,     on: :create
-
-  private
-
-  def publish_creation_successful
-    broadcast(:order_creation_successful, self)
+  
+  def create(params)
+    # Business logic...
+    if order.save
+      # Traditional event with arguments
+      broadcast('order_created', order_id: order.id, customer_id: order.customer_id)
+      
+      # Structured event
+      broadcast(Event::OrderCreated.new(order_id: order.id, customer_id: order.customer_id))
+    else
+      # Traditional event
+      broadcast('order_failed', order.errors.full_messages.join(", "))
+      
+      # Structured event
+      broadcast(Event::OrderFailed.new(order.errors.full_messages.join(", ")))
+    end
   end
+end
+```
 
-  def publish_creation_failed
-    broadcast(:order_creation_failed, self) if errors.any?
+Handling Events - Traditional Approach
+
+The traditional Wisper approach still works:
+
+```ruby
+class OrderNotifier
+  def order_created(order_id:, customer_id:)
+    # Handle the event...
+  end
+  
+  def order_failed(reason)
+    # Handle the failure...
   end
 end
+
+service = OrderService.new
+service.subscribe(OrderNotifier.new)
+service.create(params)
 ```
 
-There are more examples in the [Wiki](https://github.com/krisleech/wisper/wiki).
-
-## Global Listeners
-
-Global listeners receive all broadcast events which they can respond to.
-
-This is useful for cross cutting concerns such as recording statistics, indexing, caching and logging.
+Handling Events - Structured Approach
+To handle structured events, include the `Wisper::Listener` module and define your handlers using the `on` class method:
 
 ```ruby
-Wisper.subscribe(MyListener.new)
-```
-
-In a Rails app you might want to add your global listeners in an initializer like:
-
-```ruby
-# config/initializers/listeners.rb
-Rails.application.reloader.to_prepare do
-  Wisper.clear if Rails.env.development?
-
-  Wisper.subscribe(MyListener.new)
+lass StructuredOrderHandler
+  include Wisper::Listener
+  
+  def initialize(logger)
+    @logger = logger
+  end
+  
+  on(Event::OrderCreated) do |event|
+    @logger.info("Order #{event.order_id} was created for customer #{event.customer_id}")
+  end
+  
+  on(Event::OrderFailed) do |event|
+    @logger.error("Order creation failed: #{event.reason}")
+  end
 end
+
+service = OrderService.new
+service.subscribe(StructuredOrderHandler.new(logger))
+service.create(params)
 ```
 
-Global listeners are threadsafe. Subscribers will receive events published on all threads.
+Subscribing with Blocks
 
-
-### Scoping by publisher class
-
-You might want to globally subscribe a listener to publishers with a certain
-class.
+You can also subscribe to structured events using blocks:
 
 ```ruby
-Wisper.subscribe(MyListener.new, scope: :MyPublisher)
-Wisper.subscribe(MyListener.new, scope: MyPublisher)
-Wisper.subscribe(MyListener.new, scope: "MyPublisher")
-Wisper.subscribe(MyListener.new, scope: [:MyPublisher, :MyOtherPublisher])
+service = OrderService.new
+service.on(Event::OrderCreated) { |event| puts "Order created: #{event.order_id}" }
+       .on(Event::OrderFailed) { |event| puts "Order failed: #{event.reason}" }
+service.create(params)
 ```
 
-This will subscribe the listener to all instances of the specified class(es) and their
-subclasses.
+## Required Event Handling
 
-Alternatively you can also do exactly the same with a publisher class itself:
-
-```ruby
-MyPublisher.subscribe(MyListener.new)
-```
-
-## Temporary Global Listeners
-
-You can also globally subscribe listeners for the duration of a block.
+When using `Wisper::Listener`, every structured event must have a corresponding handler. If an event is received that the listener doesn't handle, a `Wisper::Listener::UnhandledEventError` will be raised:
 
 ```ruby
-Wisper.subscribe(MyListener.new, OtherListener.new) do
-  # do stuff
+class IncompleteListener
+  include Wisper::Listener
+  
+  on(Event::OrderCreated) do |event|
+    # This handles Event::OrderCreated
+  end
+  
+  # Missing handler for Event::OrderFailed!
 end
+
+# This will raise UnhandledEventError when Event::OrderFailed is broadcast
 ```
 
-Any events broadcast within the block by any publisher will be sent to the
-listeners.
-
-This is useful for capturing events published by objects to which you do not have access in a given context.
-
-Temporary Global Listeners are threadsafe. Subscribers will receive events published on the same thread.
-
-## Subscribing to selected events
-
-By default a listener will get notified of all events it can respond to. You
-can limit which events a listener is notified of by passing a string, symbol,
-array or regular expression to `on`:
-
-```ruby
-post_creator.subscribe(PusherListener.new, on: :create_post_successful)
-```
-
-## Prefixing broadcast events
-
-If you would prefer listeners to receive events with a prefix, for example
-`on`, you can do so by passing a string or symbol to `prefix:`.
-
-```ruby
-post_creator.subscribe(PusherListener.new, prefix: :on)
-```
-
-If `post_creator` were to broadcast the event `post_created` the subscribed
-listeners would receive `on_post_created`. You can also pass `true` which will
-use the default prefix, "on".
-
-## Mapping an event to a different method
-
-By default the method called on the listener is the same as the event
-broadcast. However it can be mapped to a different method using `with:`.
-
-```ruby
-report_creator.subscribe(MailResponder.new, with: :successful)
-```
-
-This is pretty useless unless used in conjunction with `on:`, since all events
-will get mapped to `:successful`. Instead you might do something like this:
-
-```ruby
-report_creator.subscribe(MailResponder.new, on:   :create_report_successful,
-                                            with: :successful)
-```
-
-If you pass an array of events to `on:` each event will be mapped to the same
-method when `with:` is specified. If you need to listen for select events
-_and_ map each one to a different method subscribe the listener once for
-each mapping:
-
-```ruby
-report_creator.subscribe(MailResponder.new, on:   :create_report_successful,
-                                            with: :successful)
-
-report_creator.subscribe(MailResponder.new, on:   :create_report_failed,
-                                            with: :failed)
-```
-
-You could also alias the method within your listener, as such
-`alias successful create_report_successful`.
+This helps ensure that your listeners are complete and don't silently ignore events.
 
 ## Testing
 
-Testing matchers and stubs are in separate gems.
-
-* [wisper-rspec](https://github.com/krisleech/wisper-rspec)
-* [wisper-minitest](https://github.com/digitalcuisine/wisper-minitest)
-
-### Clearing Global Listeners
-
-If you use global listeners in non-feature tests you _might_ want to clear them
-in a hook to prevent global subscriptions persisting between tests.
+The gem includes RSpec matchers build on top of [wisper-rspec](https://github.com/krisleech/wisper-rspec) for testing broadcasted events:
 
 ```ruby
-after { Wisper.clear }
+# Add this to your spec helper
+require 'wisper/rspec/matchers'
+require 'wisper/rspec/event_matchers'
+
+RSpec.configure do |config|
+  config.include(Wisper::RSpec::BroadcastMatcher)
+  config.include(Wisper::RSpec::BroadcastEventMatcher)
+end
+
+# In your specs
+it 'broadcasts the proper event' do
+  service = OrderService.new
+  
+  expect { service.create(valid_params) }
+    .to broadcast_event(Event::OrderCreated).with(order_id: 123, customer_id: 456)
+  
+  expect { service.create(invalid_params) }
+    .to broadcast_event(Event::OrderFailed).with(message: "Invalid params")
+end
 ```
 
-## Need help?
+## Migrating from Traditional to Structured Events
 
-The [Wiki](https://github.com/krisleech/wisper/wiki) has more examples,
-articles and talks.
+Here's a migration strategy:
 
-Got a specific question, try the
-[Wisper tag on StackOverflow](http://stackoverflow.com/questions/tagged/wisper).
+1. Start by creating structured events that match your existing string/symbol events
+1. Update your publishers to broadcast both formats
+1. Create structured listeners for new code
+1. Gradually convert existing listeners to the structured format
+1. Once all listeners are updated to use structured events, you can remove the old string/symbol style broadcasts
 
-## Compatibility
+Example Migration
 
-See the [build status](https://github.com/krisleech/wisper/actions) for details.
+Before:
 
-## Running Specs
+```ruby
+# Publisher
+class OrderService
+  include Wisper::Publisher
+  
+  def create(params)
+    if order.save
+      broadcast('order_created', order_id: order.id)
+    else
+      broadcast('order_failed', reason: order.errors.full_messages)
+    end
+  end
+end
 
+# Listener
+class OrderNotifier
+  def order_created(order_id:)
+    # Handle event
+  end
+  
+  def order_failed(reason:)
+    # Handle failure
+  end
+end
 ```
-bundle exec rspec
+
+After
+
+```ruby
+# Events
+module Event
+  class OrderCreated
+    attr_reader :order_id
+    
+    def initialize(order_id:)
+      @order_id = order_id
+    end
+  end
+
+  class OrderFailed
+    attr_reader :reason
+    
+    def initialize(reason:)
+      @reason = reason
+    end
+  end
+end
+
+# Publisher (during migration)
+class OrderService
+  include Wisper::Publisher
+  
+  def create(params)
+    if order.save
+      # You can remove this line once all listeners are updated
+      broadcast('order_created', order_id: order.id)
+      broadcast(Event::OrderCreated.new(order_id: order.id))
+    else
+      # You can remove this line once all listeners are updated
+      broadcast('order_failed', reason: order.errors.full_messages)
+      broadcast(Event::OrderFailed.new(reason: order.errors.full_messages))
+    end
+  end
+end
+
+# Structured Listener
+class StructuredOrderNotifier
+  include Wisper::Listener
+  
+  on(Event::OrderCreated) do |event|
+    # Handle event
+  end
+  
+  on(Event::OrderFailed) do |event|
+    # Handle failure
+  end
+end
 ```
 
-To run the specs on code changes try [entr](http://entrproject.org/):
+## Limitations and Assumptions
 
-```
-ls **/*.rb | entr bundle exec rspec
-```
-
-## Contributing
-
-Please read the [Contributing Guidelines](https://github.com/krisleech/wisper/blob/master/CONTRIBUTING.md).
-
-## Security
-
-* gem releases are [signed](http://guides.rubygems.org/security/) ([public key](https://github.com/krisleech/wisper/blob/master/gem-public_cert.pem))
-* commits are GPG signed ([public key](https://pgp.mit.edu/pks/lookup?op=get&search=0x3ABC74851F7CCC88))
-* My [Keybase.io profile](https://keybase.io/krisleech)
-
-## License
-
-(The MIT License)
-
-Copyright (c) 2013 Kris Leech
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of
-this software and associated documentation files (the 'Software'), to deal in
-the Software without restriction, including without limitation the rights to
-use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
-of the Software, and to permit persons to whom the Software is furnished to do
-so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+- This gem focuses on improving event structure, not on Wisper's delivery mechanisms
+- Global listeners are not fully supported with structured events
+- Asynchronous event handling is not directly supported - if you need to trigger async jobs, do so explicitly in your listeners
+- Every structured event must be handled by listeners that include `Wisper::Listener`
