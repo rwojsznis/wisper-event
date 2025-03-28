@@ -25,7 +25,14 @@ module Wisper
 
     def trigger(event)
       method_name = Wisper::Listener.generated_method_name(event.class.name)
-      respond_to?(method_name) ? public_send(method_name, event) : raise(UnhandledEventError, "Event #{event.class} not handled in #{self.class}")
+      if respond_to?(method_name)
+        public_send(method_name, event)
+      else
+        raise(
+          UnhandledEventError,
+          "Event #{event.class} not handled in #{self.class}",
+        )
+      end
     end
 
     module ClassMethods

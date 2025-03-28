@@ -4,10 +4,7 @@ gemspec
 
 gem 'rake'
 gem 'rspec'
-gem 'coveralls', require: false
 
-group :extras do
-  gem 'flay'
+group :development do
   gem 'pry'
-  gem 'yard'
 end

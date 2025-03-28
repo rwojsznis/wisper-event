@@ -9,7 +9,7 @@ module Wisper
         @captured_events = []
       end
 
-      def respond_to?(method_name, include_private = false)
+      def respond_to?(_method_name, _include_private = false)
         true
       end
 
@@ -21,7 +21,7 @@ module Wisper
         true
       end
 
-      def method_missing(method_name, *args, &block)
+      def method_missing(_method_name, *args)
         @captured_events << args[0]
       end
 
@@ -32,8 +32,8 @@ module Wisper
       def received_event?(expected_event, expected_attributes = nil)
         @captured_events.any? do |event|
           expected_class = expected_event.is_a?(Class) ? expected_event : expected_event.class
-          
-          if event.is_a?(expected_class) 
+
+          if event.is_a?(expected_class)
             if expected_attributes.nil?
               expected_event.is_a?(Class) || event == expected_event
             else
@@ -76,20 +76,20 @@ module Wisper
         end
 
         def description
-          desc =+ "broadcast event of type #{event_class_name}"
+          desc = + "broadcast event of type #{event_class_name}"
           desc << " with attributes #{@expected_attributes.inspect}" if @expected_attributes
           desc
         end
 
         def failure_message
-          msg =+ "expected publisher to broadcast event of type #{event_class_name}"
+          msg = + "expected publisher to broadcast event of type #{event_class_name}"
           msg << " with attributes #{@expected_attributes.inspect}" if @expected_attributes
           msg << captured_events_list
           msg
         end
 
         def failure_message_when_negated
-          msg =+ "expected publisher not to broadcast event of type #{event_class_name}"
+          msg = + "expected publisher not to broadcast event of type #{event_class_name}"
           msg << " with attributes #{@expected_attributes.inspect}" if @expected_attributes
           msg
         end
@@ -111,11 +111,11 @@ module Wisper
         def captured_events_list
           if @recorder.captured_events.any?
             events = @recorder.captured_events.map do |event|
-              event.is_a?(Array) ? "#{event[0]}(#{event[1..-1].join(", ")})" : event.inspect
+              event.is_a?(Array) ? "#{event[0]}(#{event[1..].join(', ')})" : event.inspect
             end
             " (actual events broadcast: #{events.join(', ')})"
           else
-            " (no events broadcast)"
+            ' (no events broadcast)'
           end
         end
 

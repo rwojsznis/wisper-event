@@ -1,4 +1,6 @@
-require_relative "../../lib/wisper/rspec/event_matchers"
+# frozen_string_literal: true
+
+require_relative '../../lib/wisper/rspec/event_matchers'
 
 class MySuccessEvent
   attr_reader :message
@@ -51,7 +53,6 @@ class StructuredListener
 end
 
 describe Wisper do
-
   it 'subscribes object to all published events' do
     classic_listener = instance_double(ClassicListener)
     expect(classic_listener).to receive(:success).with(message: 'hello')
@@ -96,8 +97,8 @@ describe Wisper do
 
     command = MyCommand.new
 
-    command.subscribe(listener_1, :on => :success, :with => :happy_days)
-    command.subscribe(listener_2, :on => :failure, :with => :sad_days)
+    command.subscribe(listener_1, on: :success, with: :happy_days)
+    command.subscribe(listener_2, on: :failure, with: :sad_days)
 
     command.execute(true)
     command.execute(false)
@@ -112,6 +113,7 @@ describe Wisper do
     command.on(MySuccessEvent) { |event| insider.render(event.message) }
 
     command.execute(true)
+    command.execute(false)
   end
 
   it 'subscribes block can be chained' do
@@ -122,8 +124,8 @@ describe Wisper do
 
     command = MyCommand.new
 
-    command.on(:success) { |message| insider.render('success') }
-      .on(:failure) { |message| insider.render('failure') }
+    command.on(:success) { |_message| insider.render('success') }
+           .on(MyFailureEvent) { |_message| insider.render('failure') }
 
     command.execute(true)
     command.execute(false)
@@ -135,7 +137,7 @@ describe Wisper do
     expect { command.execute(true) }
       .to broadcast_event(MySuccessEvent).with(message: 'hello')
 
-      expect { command.execute(false) }
+    expect { command.execute(false) }
       .to broadcast_event(MyFailureEvent).with(message: 'world')
   end
 end

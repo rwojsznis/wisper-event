@@ -1,13 +1,12 @@
-require 'coveralls'
-Coveralls.wear!
+# frozen_string_literal: true
 
-require 'wisper'
+require 'wisper_event'
+WisperEvent.apply!
 
 RSpec.configure do |config|
   config.run_all_when_everything_filtered = true
   config.filter_run :focus
   config.order = 'random'
-  config.after(:each) { Wisper::GlobalListeners.clear }
 
   config.expect_with :rspec do |c|
     c.syntax = :expect
@@ -16,9 +15,4 @@ RSpec.configure do |config|
   config.mock_with :rspec do |c|
     c.syntax = :expect
   end
-end
-
-# returns an anonymous wispered class
-def publisher_class
-  Class.new { include Wisper::Publisher }
 end
