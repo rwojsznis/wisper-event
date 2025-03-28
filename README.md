@@ -21,6 +21,8 @@ This gem was inspired by the original Wisper author's other gems:
 - [wisper_next](https://gitlab.com/kris.leech/wisper_next)
 - [ma](https://gitlab.com/kris.leech/ma)
 
+It solves very particular problem and might be not a good fit for your application.
+
 ## Installation
 
 Add this line to your application's Gemfile:
@@ -37,7 +39,7 @@ bundle install
 
 ## Usage
 
-Enabling wisper-event
+### Enabling wisper-event
 
 After installing the gem, you need to apply the monkey patches:
 
@@ -47,7 +49,7 @@ WisperEvent.apply!
 
 This is best done during your application's initialization.
 
-Creating Structured Events
+### Creating Structured Events
 
 Define your events as plain Ruby classes:
 
@@ -72,7 +74,8 @@ module Event
 end
 ```
 
-Publishing Events
+### Publishing Events
+
 You can publish both traditional Wisper events and structured events from the same publisher:
 
 ```ruby
@@ -98,7 +101,7 @@ class OrderService
 end
 ```
 
-Handling Events - Traditional Approach
+### Handling Events - traditional approach
 
 The traditional Wisper approach still works:
 
@@ -118,7 +121,8 @@ service.subscribe(OrderNotifier.new)
 service.create(params)
 ```
 
-Handling Events - Structured Approach
+### Handling Events - Structured Approach
+
 To handle structured events, include the `Wisper::Listener` module and define your handlers using the `on` class method:
 
 ```ruby
@@ -143,7 +147,7 @@ service.subscribe(StructuredOrderHandler.new(logger))
 service.create(params)
 ```
 
-Subscribing with Blocks
+### Subscribing with Blocks
 
 You can also subscribe to structured events using blocks:
 
@@ -210,7 +214,7 @@ Here's a migration strategy:
 1. Gradually convert existing listeners to the structured format
 1. Once all listeners are updated to use structured events, you can remove the old string/symbol style broadcasts
 
-Example Migration
+### Example Migration
 
 Before:
 
@@ -296,6 +300,7 @@ end
 ## Limitations and Assumptions
 
 - This gem focuses on improving event structure, not on Wisper's delivery mechanisms
-- Global listeners are not fully supported with structured events
+- Global listeners are not supported with structured events
 - Asynchronous event handling is not directly supported - if you need to trigger async jobs, do so explicitly in your listeners
 - Every structured event must be handled by listeners that include `Wisper::Listener`
+- `on` / `with` events mapping is not supported as it makes no sense with structured events
