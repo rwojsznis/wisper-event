@@ -49,7 +49,7 @@ WisperEvent.apply!
 
 This is best done during your application's initialization.
 
-### Creating Structured Events
+### Creating structured events
 
 Define your events as plain Ruby classes:
 
@@ -74,7 +74,7 @@ module Event
 end
 ```
 
-### Publishing Events
+### Publishing events
 
 You can publish both traditional Wisper events and structured events from the same publisher:
 
@@ -101,7 +101,7 @@ class OrderService
 end
 ```
 
-### Handling Events - traditional approach
+### Handling events - traditional approach
 
 The traditional Wisper approach still works:
 
@@ -121,7 +121,7 @@ service.subscribe(OrderNotifier.new)
 service.create(params)
 ```
 
-### Handling Events - Structured Approach
+### Handling events - structured approach
 
 To handle structured events, include the `Wisper::Listener` module and define your handlers using the `on` class method:
 
@@ -158,9 +158,9 @@ service.on(Event::OrderCreated) { |event| puts "Order created: #{event.order_id}
 service.create(params)
 ```
 
-## Required Event Handling
+## Required event handling
 
-When using `Wisper::Listener`, every structured event must have a corresponding handler. If an event is received that the listener doesn't handle, a `Wisper::Listener::UnhandledEventError` will be raised:
+When using `Wisper::Listener`, every structured event **must have** a corresponding handler. If an event is received that the listener doesn't handle, a `Wisper::Listener::UnhandledEventError` will be raised:
 
 ```ruby
 class IncompleteListener
@@ -204,7 +204,7 @@ it 'broadcasts the proper event' do
 end
 ```
 
-## Migrating from Traditional to Structured Events
+## Migrating to structured events
 
 Here's a migration strategy:
 
@@ -214,7 +214,7 @@ Here's a migration strategy:
 1. Gradually convert existing listeners to the structured format
 1. Once all listeners are updated to use structured events, you can remove the old string/symbol style broadcasts
 
-### Example Migration
+### Example migration
 
 Before:
 
@@ -283,8 +283,8 @@ class OrderService
   end
 end
 
-# Structured Listener
-class StructuredOrderNotifier
+# Modified structured listener
+class OrderNotifier
   include Wisper::Listener
   
   on(Event::OrderCreated) do |event|
@@ -294,10 +294,14 @@ class StructuredOrderNotifier
   on(Event::OrderFailed) do |event|
     # Handle failure
   end
+
+  # If listener is being re-used across different publishers you will be
+  # forced to broadcast structured events across those publishers and handle
+  # all those events in this listener - which is _desired_ behavior
 end
 ```
 
-## Limitations and Assumptions
+## Limitations and assumptions
 
 - This gem focuses on improving event structure, not on Wisper's delivery mechanisms
 - Global listeners are not supported with structured events
