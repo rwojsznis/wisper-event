@@ -6,7 +6,7 @@ A structured event extension for the Wisper gem.
 
 The [Wisper gem](https://github.com/krisleech/wisper) is a popular micro-library for implementing the publisher-subscriber pattern in Ruby. While powerful and flexible, Wisper's approach of broadcasting symbols or strings with unstructured arguments can lead to:
 
-1. **Coupling issues** - As applications grow, it becomes difficult to track which publishers broadcast which events and which subscribers listen to them
+1. **Too loose coupling** - While loose coupling is generally desirable, Wisper's string/symbol-based events make it difficult to track relationships between publishers and subscribers as applications grow
 2. **Unclear interfaces** - Without structured events, argument signatures can change unexpectedly, causing silent failures
 3. **Poor discoverability** - It's challenging to find all handlers for a specific event across a large codebase
 
