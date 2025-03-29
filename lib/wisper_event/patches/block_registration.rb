@@ -9,7 +9,8 @@ module WisperEvent
         if event.is_a?(String) || event.is_a?(Symbol)
           super
         else
-          listener.call(event) # Structured event behavior
+          # Structured event
+          listener.call(event)
         end
       end
     end

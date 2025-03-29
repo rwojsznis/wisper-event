@@ -131,7 +131,6 @@ module Wisper
   end
 end
 
-# Define negated matcher
 ::RSpec::Matchers.define_negated_matcher :not_broadcast_event, :broadcast_event
 
 RSpec.configure do |config|

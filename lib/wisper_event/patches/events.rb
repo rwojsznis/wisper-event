@@ -25,6 +25,7 @@ module WisperEvent
           Symbol => ->(event) { list.to_s == event },
           Enumerable => ->(event) { list.map(&:to_s).include? event },
           Regexp => ->(event) { list.match(event) || false },
+          # Structured event
           Class => ->(event) { event.is_a?(list) }
         }
       end

@@ -4,10 +4,9 @@ module WisperEvent
   module Patches
     module ObjectRegistration
       def broadcast(event, publisher, *args, **kwargs)
-        # Original string/symbol event behavior
         if event.is_a?(String) || event.is_a?(Symbol)
           super
-        # Structured event behavior
+        # Structured event
         # Wisper::Listeners are required to handle structured events
         elsif listener.respond_to?(:_wisper_listener?)
           listener.trigger(event)
