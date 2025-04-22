@@ -6,6 +6,7 @@ require 'wisper_event/version'
 Gem::Specification.new do |spec|
   spec.name = "wisper-event"
   spec.version = WisperEvent::VERSION
+  spec.platform = "ruby"
   spec.authors = ["Rafal Wojsznis"]
   spec.email = ["rafal.wojsznis@gmail.com"]
   spec.description = %q{Structured events for Wisper}
